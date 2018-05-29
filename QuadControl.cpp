@@ -37,6 +37,8 @@ void QuadControl::Init()
 
   kpPQR = config->Get(_config + ".kpPQR", V3F());
 
+//  kpppa = config->Get(_config + ".kappa", 0);
+
   maxDescentRate = config->Get(_config + ".maxDescentRate", 100);
   maxAscentRate = config->Get(_config + ".maxAscentRate", 100);
   maxSpeedXY = config->Get(_config + ".maxSpeedXY", 100);
@@ -69,12 +71,29 @@ VehicleCommand QuadControl::GenerateMotorCommands(float collThrustCmd, V3F momen
   // - you can access parts of desMoment via e.g. desMoment.x
   // You'll need the arm length parameter L, and the drag/thrust ratio kappa
 
+  // Refer to Lesson 11 --> Chapter 21 for 2D 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
 
-  cmd.desiredThrustsN[0] = mass * 9.81f / 4.f; // front left
-  cmd.desiredThrustsN[1] = mass * 9.81f / 4.f; // front right
-  cmd.desiredThrustsN[2] = mass * 9.81f / 4.f; // rear left
-  cmd.desiredThrustsN[3] = mass * 9.81f / 4.f; // rear right
+  // technically collThrustCmd =  f1 + f2 + f3 + f4;
+
+  // Convert desired moment into differential thrusts
+  V3F diffThrust;
+ 
+  // for X shaped quad
+  diffThrust.x = momentCmd.x / L / 2.f / sqrtf(2);
+  diffThrust.y = momentCmd.y / L / 2.f / sqrtf(2);
+  diffThrust.z = momentCmd.z / 4.f / kappa;
+
+  //float l = L/sqrt(2);
+  //cmd.desiredThrustsN[0] = (momentCmd.x/l + momentCmd.y/l - momentCmd.z/kappa + collThrustCmd )/4.0; // front left
+
+  // MIXING
+  // combine the collective thrust with the differential thrust commands to find desired motor thrusts
+   // X Shaped Quad (NED Frame)
+   cmd.desiredThrustsN[0] = collThrustCmd / 4.f - diffThrust.z + diffThrust.y + diffThrust.x; // front left
+   cmd.desiredThrustsN[1] = collThrustCmd / 4.f + diffThrust.z + diffThrust.y - diffThrust.x; // front right
+   cmd.desiredThrustsN[2] = collThrustCmd / 4.f + diffThrust.z - diffThrust.y + diffThrust.x; // rear left
+   cmd.desiredThrustsN[3] = collThrustCmd / 4.f - diffThrust.z - diffThrust.y - diffThrust.x; // rear right
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
